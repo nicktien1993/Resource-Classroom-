@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
-import { BookOpen, FileText, ArrowLeft, Sparkles, LayoutDashboard } from 'lucide-react';
+import { BookOpen, ArrowLeft, LayoutDashboard } from 'lucide-react';
 import { SelectionParams, Chapter, HandoutContent, HomeworkContent, HomeworkConfig } from './types';
 import { fetchChapters, generateHandoutFromText, generateHomework } from './geminiService';
 import SelectionForm from './SelectionForm';
@@ -34,7 +34,7 @@ const App: React.FC = () => {
       setChapters(data);
     } catch (error) {
       console.error(error);
-      alert('無法取得目錄，請檢查 API Key 權限。');
+      alert('無法取得目錄，請檢查 API Key 權限或網路連接。');
     } finally {
       setLoading(false);
     }
@@ -49,7 +49,7 @@ const App: React.FC = () => {
       setView('handout');
     } catch (error) {
       console.error(error);
-      alert('生成講義失敗。');
+      alert('生成講義失敗，AI 老師可能累了，請稍後再試。');
     } finally {
       setLoading(false);
     }
@@ -95,7 +95,11 @@ const App: React.FC = () => {
               <button onClick={() => setView('handout')} className={`px-4 py-3 rounded-xl font-bold transition text-left ${view === 'handout' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}>
                 1. 教學講義
               </button>
-              <button onClick={() => homework && setView('homework')} className={`px-4 py-3 rounded-xl font-bold transition text-left ${view === 'homework' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'} ${!homework ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              <button 
+                onClick={() => homework && setView('homework')} 
+                disabled={!homework}
+                className={`px-4 py-3 rounded-xl font-bold transition text-left ${view === 'homework' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'} ${!homework ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
                 2. 練習卷
               </button>
             </nav>
@@ -112,7 +116,7 @@ const App: React.FC = () => {
         {view === 'welcome' && !loading && (
           <div className="h-full flex flex-col items-center justify-center text-center opacity-30">
             <LayoutDashboard size={80} className="mb-6" />
-            <h2 className="text-3xl font-black italic">請於左側面板選擇「學年度、出版社、年級」開始</h2>
+            <h2 className="text-3xl font-black italic">請於左側面板選擇單元開始教學</h2>
           </div>
         )}
         {view === 'handout' && handout && (
