@@ -2,13 +2,13 @@
 import React, { useState, useCallback } from 'react';
 import { BookOpen, ArrowLeft, LayoutDashboard } from 'lucide-react';
 import { SelectionParams, Chapter, HandoutContent, HomeworkContent, HomeworkConfig } from './types';
-import { fetchChapters, generateHandoutFromText, generateHomework } from './geminiService';
-import SelectionForm from './SelectionForm';
-import ChapterSelector from './ChapterSelector';
-import ManualUnitInput from './ManualUnitInput';
-import HandoutViewer from './HandoutViewer';
-import HomeworkViewer from './HomeworkViewer';
-import HomeworkConfigSection from './HomeworkConfigSection';
+import { fetchChapters, generateHandoutFromText, generateHomework } from './services/geminiService';
+import SelectionForm from './components/SelectionForm';
+import ChapterSelector from './components/ChapterSelector';
+import ManualUnitInput from './components/ManualUnitInput';
+import HandoutViewer from './components/HandoutViewer';
+import HomeworkViewer from './components/HomeworkViewer';
+import HomeworkConfigSection from './components/HomeworkConfigSection';
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
