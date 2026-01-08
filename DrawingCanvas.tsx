@@ -4,10 +4,9 @@ import React, { useRef, useEffect, useState } from 'react';
 interface Props {
   height?: number;
   id: string;
-  isVisible?: boolean;
 }
 
-const DrawingCanvas: React.FC<Props> = ({ height = 400, id, isVisible = true }) => {
+const DrawingCanvas: React.FC<Props> = ({ height = 400, id }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -17,64 +16,49 @@ const DrawingCanvas: React.FC<Props> = ({ height = 400, id, isVisible = true }) 
   const state = useRef({
     lastX: 0,
     lastY: 0,
-    currentWidth: 0,
     snapshot: null as ImageData | null,
-    resizeTimeout: null as number | null,
   });
 
-  const syncCanvas = () => {
-    const canvas = canvasRef.current;
-    if (!canvas || !containerRef.current || !isVisible) return;
-    
-    const rect = containerRef.current.getBoundingClientRect();
-    if (rect.width === 0 || Math.abs(rect.width - state.current.currentWidth) < 2) return;
-
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return;
-
-    // 安全檢查：只有當前寬度大於 0 且 canvas 本身有尺寸時才擷取快照
-    if (state.current.currentWidth > 0 && canvas.width > 0 && canvas.height > 0) {
-      try {
-        state.current.snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      } catch (e) {
-        console.warn("Failed to get image data", e);
-      }
-    }
-
-    state.current.currentWidth = rect.width;
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.height = `${height}px`;
-    ctx.scale(dpr, dpr);
-
-    // 繪製背景線
-    ctx.strokeStyle = '#f8fafc';
-    ctx.lineWidth = 1;
-    for (let y = 40; y < height; y += 40) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(rect.width, y);
-      ctx.stroke();
-    }
-
-    if (state.current.snapshot) {
-      try {
-        ctx.putImageData(state.current.snapshot, 0, 0);
-      } catch (e) {
-        // 快照尺寸不符時不還原
-      }
-    }
-  };
-
   useEffect(() => {
-    const observer = new ResizeObserver(() => {
-      if (state.current.resizeTimeout) window.clearTimeout(state.current.resizeTimeout);
-      state.current.resizeTimeout = window.setTimeout(syncCanvas, 100);
-    });
-    if (containerRef.current) observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, [isVisible]);
+    const canvas = canvasRef.current;
+    if (!canvas || !containerRef.current) return;
+    
+    const resizeCanvas = () => {
+      const rect = containerRef.current!.getBoundingClientRect();
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return;
+
+      // 儲存現有繪圖
+      if (canvas.width > 0 && canvas.height > 0) {
+        state.current.snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      }
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.height = `${height}px`;
+      ctx.scale(dpr, dpr);
+
+      // 繪製背景線（輔助格子）
+      ctx.strokeStyle = '#f1f5f9';
+      ctx.lineWidth = 1;
+      for (let y = 40; y < height; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(rect.width, y);
+        ctx.stroke();
+      }
+
+      // 還原繪圖
+      if (state.current.snapshot) {
+        ctx.putImageData(state.current.snapshot, 0, 0);
+      }
+    };
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    return () => window.removeEventListener('resize', resizeCanvas);
+  }, [height]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     const canvas = canvasRef.current;
@@ -115,15 +99,23 @@ const DrawingCanvas: React.FC<Props> = ({ height = 400, id, isVisible = true }) 
   };
 
   return (
-    <div ref={containerRef} className="w-full bg-white rounded-2xl border-2 border-slate-200 overflow-hidden shadow-inner">
+    <div ref={containerRef} className="w-full bg-white rounded-2xl border-2 border-slate-200 overflow-hidden shadow-inner no-print">
       <div className="p-3 bg-slate-50 border-b flex gap-4">
-        <button onClick={() => setTool('pen')} className={`px-4 py-1 rounded-lg font-bold ${tool === 'pen' ? 'bg-slate-800 text-white' : 'bg-white'}`}>🖊️ 筆</button>
-        <button onClick={() => setTool('eraser')} className={`px-4 py-1 rounded-lg font-bold ${tool === 'eraser' ? 'bg-rose-500 text-white' : 'bg-white'}`}>🧽 擦</button>
-        <button onClick={() => setBrushColor('#ef4444')} className="w-8 h-8 rounded-full bg-red-500 border-2 border-white" />
-        <button onClick={() => setBrushColor('#3b82f6')} className="w-8 h-8 rounded-full bg-blue-500 border-2 border-white" />
-        <button onClick={() => setBrushColor('#000000')} className="w-8 h-8 rounded-full bg-black border-2 border-white" />
+        <button onClick={() => setTool('pen')} className={`px-4 py-1 rounded-lg font-bold text-sm ${tool === 'pen' ? 'bg-slate-800 text-white' : 'bg-white border text-slate-400'}`}>🖊️ 畫筆</button>
+        <button onClick={() => setTool('eraser')} className={`px-4 py-1 rounded-lg font-bold text-sm ${tool === 'eraser' ? 'bg-rose-500 text-white' : 'bg-white border text-slate-400'}`}>🧽 擦除</button>
+        <div className="flex gap-2 ml-auto">
+          {['#000000', '#ef4444', '#3b82f6'].map(c => (
+            <button key={c} onClick={() => { setBrushColor(c); setTool('pen'); }} className="w-8 h-8 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: c }} />
+          ))}
+        </div>
       </div>
-      <canvas ref={canvasRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={() => setIsDrawing(false)} className="w-full cursor-crosshair block touch-none" />
+      <canvas 
+        ref={canvasRef} 
+        onPointerDown={handlePointerDown} 
+        onPointerMove={handlePointerMove} 
+        onPointerUp={() => setIsDrawing(false)} 
+        className="w-full cursor-crosshair block touch-none" 
+      />
     </div>
   );
 };
