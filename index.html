@@ -1,152 +1,199 @@
 
 <!DOCTYPE html>
 <html lang="zh-TW">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>資源班數學教室 - AI 自動講義生成器</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
-      
-      body {
-        font-family: 'Noto Sans TC', sans-serif;
-        background-color: #f8fafc;
-        color: #0f172a;
-        -webkit-font-smoothing: antialiased;
-      }
-
-      /* 核心：注音排版 (台灣標準教科書風格) */
-      ruby {
-        display: inline-flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        vertical-align: middle !important;
-        margin: 0 0.45em !important; 
-        line-height: 1 !important;
-        position: relative;
-      }
-      
-      rt {
-        display: block !important;
-        position: relative !important;
-        writing-mode: vertical-rl !important;
-        text-orientation: upright !important;
-        font-family: 'Noto Sans TC', sans-serif !important;
-        font-size: 0.38em !important; 
-        line-height: 1 !important;
-        letter-spacing: -0.05em !important;
-        color: #475569;
-        font-weight: 900;
-        margin-left: 0.05em !important; 
-        padding: 0 !important;
-        min-width: 1.1em;
-        text-align: center;
-      }
-
-      .tone-right {
-        position: absolute !important;
-        right: -0.45em !important; 
-        top: 50% !important;
-        transform: translateY(-20%) !important;
-        font-size: 1.1em !important;
-        writing-mode: horizontal-tb !important;
-      }
-      
-      .tone-top {
-        position: absolute !important;
-        top: -0.58em !important; 
-        left: 50% !important;
-        transform: translateX(-50%) !important; 
-        font-size: 1.1em !important;
-        writing-mode: horizontal-tb !important;
-        line-height: 1 !important;
-      }
-
-      .point-badge {
-        display: inline-flex;
-        align-items: center;
-        background: linear-gradient(135deg, #f59e0b, #ea580c);
-        color: white;
-        padding: 0.45rem 1.6rem;
-        border-radius: 999px;
-        font-size: 1.35rem;
-        font-weight: 900;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 10px 20px -5px rgba(234, 88, 12, 0.4);
-        border: 2.5px solid rgba(255, 255, 255, 0.3);
-        line-height: 1 !important;
-      }
-      
-      .premium-point-card {
-        background: #fffdf5 !important;
-        border-left: 14px solid #f59e0b !important;
-        border-radius: 2.5rem;
-        padding: 3rem;
-        margin: 3.5rem 0 !important;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
-        position: relative;
-        display: block !important;
-        width: 100%;
-      }
-
-      .example-block {
-        background-color: #ffffff !important;
-        border: 2px solid #e2e8f0 !important;
-        border-radius: 3rem;
-        padding: 4rem;
-        margin-bottom: 4rem;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04);
-      }
-
-      .practice-section {
-        background-color: #f0f9ff !important; 
-        border-radius: 4rem;
-        padding: 4rem;
-        margin-top: 6rem;
-        border: 2px solid #e0f2fe;
-      }
-
-      .visual-aid-container {
-        margin: 2rem 0 4rem 0;
-        padding: 3rem;
-        background: #ffffff;
-        border: 3px dashed #cbd5e1;
-        border-radius: 3rem;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
-      }
-
-      @media print {
-        @page { size: A4; margin: 1cm; }
-        .no-print { display: none !important; }
-        body { background: white !important; }
-        .homework-container { border: none !important; box-shadow: none !important; padding: 0 !important; }
-      }
-
-      @keyframes float-slow {
-        0%, 100% { transform: translateY(0px) rotate(0deg); }
-        50% { transform: translateY(-20px) rotate(5deg); }
-      }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        .visual-aid-container { margin: 2rem 0; padding: 2rem; background: #fff; border: 3px dashed #cbd5e1; border-radius: 2rem; display: flex; justify-content: center; }
+        .example-block { background: #fff; border: 2px solid #e2e8f0; border-radius: 2rem; padding: 2rem; margin-bottom: 2rem; }
+        @media print { .no-print { display: none !important; } }
     </style>
-    <script type="importmap">
-    {
-      "imports": {
-        "react/": "https://esm.sh/react@^19.2.3/",
-        "react": "https://esm.sh/react@^19.2.3",
-        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-        "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
-      }
-    }
-    </script>
-    <script type="module" src="./index.tsx"></script>
-  <link rel="stylesheet" href="/index.css">
 </head>
-  <body>
+<body>
     <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
+
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "@google/genai": "https://esm.sh/@google/genai@1.34.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+
+    <script type="module">
+        import React, { useState, useEffect, useMemo, useRef } from 'react';
+        import ReactDOM from 'react-dom';
+        import { GoogleGenAI, Type } from '@google/genai';
+
+        // --- AI 服務邏輯 ---
+        const SYSTEM_INSTRUCTION = `你是一位專業的國小資源班特教老師。
+        1. 講義：題目與步驟分離。
+        2. 練習卷：純題目，可提供提示。
+        3. 必須使用 SVG 圖示輔助。
+        4. 禁止使用 $ 符號，直接寫純文字數學式。
+        格式要求：僅回傳 JSON。`;
+
+        const cleanJsonResponse = (text) => text?.replace(/```json/g, '').replace(/```/g, '').trim() || "{}";
+
+        // --- React 元件 ---
+        const App = () => {
+            const [params, setParams] = useState({ year: '114', publisher: '康軒', grade: '四年級', semester: '上' });
+            const [chapters, setChapters] = useState([]);
+            const [handout, setHandout] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [hasKey, setHasKey] = useState(true);
+
+            // 檢查 API KEY
+            useEffect(() => {
+                const checkKey = async () => {
+                    if (!window.process?.env?.API_KEY && window.aistudio) {
+                        const selected = await window.aistudio.hasSelectedApiKey();
+                        setHasKey(selected);
+                    }
+                };
+                checkKey();
+            }, []);
+
+            const handleSearch = async () => {
+                setLoading(true);
+                try {
+                    const ai = new GoogleGenAI({ apiKey: window.process?.env?.API_KEY || "" });
+                    const response = await ai.models.generateContent({
+                        model: 'gemini-3-flash-preview',
+                        contents: `請列出 ${params.publisher}版 國小數學 ${params.grade}${params.semester} 的單元目錄。`,
+                        config: {
+                            responseMimeType: "application/json",
+                            responseSchema: {
+                                type: Type.ARRAY,
+                                items: {
+                                    type: Type.OBJECT,
+                                    properties: {
+                                        title: { type: Type.STRING },
+                                        subChapters: { type: Type.ARRAY, items: { type: Type.STRING } }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    setChapters(JSON.parse(cleanJsonResponse(response.text)));
+                } catch (e) { alert("搜尋失敗，請確認 API 金鑰"); }
+                setLoading(false);
+            };
+
+            const generateHandout = async (title, sub) => {
+                setLoading(true);
+                try {
+                    const ai = new GoogleGenAI({ apiKey: window.process?.env?.API_KEY || "" });
+                    const response = await ai.models.generateContent({
+                        model: 'gemini-3-pro-preview',
+                        contents: `針對「${title}-${sub}」生成資源班教學講義。`,
+                        config: {
+                            systemInstruction: SYSTEM_INSTRUCTION,
+                            responseMimeType: "application/json"
+                        }
+                    });
+                    setHandout(JSON.parse(cleanJsonResponse(response.text)));
+                } catch (e) { alert("生成失敗"); }
+                setLoading(false);
+            };
+
+            return (
+                <div className="p-4 max-w-5xl mx-auto">
+                    <header className="flex justify-between items-center mb-8 no-print">
+                        <h1 className="text-3xl font-black">🍎 資源班數學教室</h1>
+                        {!hasKey && (
+                            <button onClick={() => window.aistudio.openSelectKey()} className="bg-rose-500 text-white px-4 py-2 rounded-full font-bold">🔑 連接 API</button>
+                        )}
+                    </header>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {/* 左側欄：設定與目錄 */}
+                        <div className="space-y-6 no-print">
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border">
+                                <h3 className="font-bold mb-4">1. 選擇版本</h3>
+                                <select className="w-full mb-3 p-2 border rounded" onChange={e => setParams({...params, publisher: e.target.value})}>
+                                    <option>康軒</option><option>南一</option><option>翰林</option>
+                                </select>
+                                <select className="w-full mb-3 p-2 border rounded" onChange={e => setParams({...params, grade: e.target.value})}>
+                                    <option>一年級</option><option>二年級</option><option>三年級</option><option>四年級</option><option>五年級</option><option>六年級</option>
+                                </select>
+                                <button onClick={handleSearch} disabled={loading} className="w-full bg-slate-800 text-white py-2 rounded-xl font-bold">
+                                    {loading ? '搜尋中...' : '查詢目錄'}
+                                </button>
+                            </div>
+
+                            {chapters.length > 0 && (
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border max-h-96 overflow-y-auto">
+                                    <h3 className="font-bold mb-4">2. 選擇單元</h3>
+                                    {chapters.map((c, i) => (
+                                        <div key={i} className="mb-4">
+                                            <p className="font-bold text-sm text-slate-500 border-b pb-1 mb-2">{c.title}</p>
+                                            {c.subChapters.map((s, si) => (
+                                                <button key={si} onClick={() => generateHandout(c.title, s)} className="block w-full text-left text-xs p-2 hover:bg-slate-50 rounded">
+                                                    {s}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 右側欄：內容檢視 */}
+                        <div className="md:col-span-2">
+                            {loading && <div className="p-20 text-center font-bold animate-pulse text-slate-400">正在製作教材...</div>}
+                            
+                            {handout && (
+                                <div className="bg-white p-10 rounded-3xl shadow-lg border border-slate-200">
+                                    <div className="flex justify-between mb-8 no-print">
+                                        <button onClick={() => window.print()} className="bg-slate-800 text-white px-4 py-2 rounded-lg font-bold">列印講義</button>
+                                    </div>
+                                    <h2 className="text-4xl font-black mb-6">{handout.title}</h2>
+                                    <div className="text-xl leading-relaxed mb-8 bg-slate-50 p-6 rounded-2xl border-l-8 border-amber-500">
+                                        {handout.concept}
+                                    </div>
+                                    
+                                    <div className="space-y-12">
+                                        {handout.examples?.map((ex, i) => (
+                                            <div key={i} className="example-block">
+                                                <span className="bg-blue-600 text-white px-4 py-1 rounded-lg text-xs font-bold mb-4 inline-block">例題 {i+1}</span>
+                                                <p className="text-2xl font-bold mb-6">{ex.question}</p>
+                                                <div className="space-y-2 border-t pt-4">
+                                                    {ex.stepByStep?.map((s, si) => (
+                                                        <p key={si} className="text-slate-600">Step {si+1}: {s}</p>
+                                                    ))}
+                                                </div>
+                                                <p className="mt-6 text-2xl font-black text-emerald-600">答：{ex.answer}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {!handout && !loading && (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-300 p-20 border-4 border-dashed rounded-3xl">
+                                    <span className="text-6xl mb-4">🎒</span>
+                                    <p className="font-bold">請先從左側選擇單元開始生成</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(App));
+    </script>
 </body>
 </html>
