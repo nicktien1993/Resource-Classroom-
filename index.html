@@ -5,193 +5,33 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>資源班數學教室 - 老師的 AI 教研助理</title>
-    <!-- 引入 Tailwind CSS 工具 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 PDF 導出工具 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <!-- 關鍵：引入 Babel 翻譯官，讓瀏覽器看懂 React 代碼 -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; }
+        .math-text { line-height: 2.2; font-size: 1.5rem; font-weight: 700; }
         .no-print { display: block; }
         @media print { 
             .no-print { display: none !important; }
-            body { background: white; }
-            .print-area { box-shadow: none !important; border: none !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
-            .page-break { page-break-before: always; }
+            .print-area { width: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; }
         }
-        .canvas-container { border: 2px dashed #cbd5e1; border-radius: 1rem; background: #fff; touch-action: none; }
-        .math-text { line-height: 2.5; font-size: 1.5rem; font-weight: 700; }
-        .visual-aid svg { max-width: 100%; height: auto; margin: 1rem 0; }
     </style>
-</head>
-<body>
-    <div id="root"></div>
-
-    <!-- 設定模組路徑 -->
     <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react": "https://esm.sh/react@19.0.0",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
     "@google/genai": "https://esm.sh/@google/genai@1.34.0",
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/"
   }
 }
 </script>
-
-    <!-- 注意：這裡的 type 變成了 text/babel，並加入 data-type="module" -->
-    <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useRef } from 'react';
-        import ReactDOM from 'react-dom/client';
-        import { GoogleGenAI, Type } from '@google/genai';
-
-        const SYSTEM_PROMPT = `你是一位資深國小資源班特教老師。
-        1. 講義 (Handout)：拆解步驟，提供例題。
-        2. 練習卷 (Homework)：僅限題目與提示。
-        3. 必須使用 SVG 圖示輔助。
-        4. 禁止使用 $ 符號。直接寫純文字。
-        回傳格式：純 JSON 物件。`;
-
-        const DrawingCanvas = ({ id }) => {
-            const canvasRef = useRef(null);
-            const [isDrawing, setIsDrawing] = useState(false);
-            const [tool, setTool] = useState('pen');
-
-            useEffect(() => {
-                const canvas = canvasRef.current;
-                const ctx = canvas.getContext('2d');
-                const resize = () => {
-                    const rect = canvas.parentNode.getBoundingClientRect();
-                    canvas.width = rect.width;
-                    canvas.height = 300;
-                    ctx.lineCap = 'round'; ctx.lineWidth = 3;
-                };
-                resize();
-                window.addEventListener('resize', resize);
-                return () => window.removeEventListener('resize', resize);
-            }, []);
-
-            const startDrawing = (e) => { setIsDrawing(true); draw(e); };
-            const stopDrawing = () => { setIsDrawing(false); canvasRef.current.getContext('2d').beginPath(); };
-            const draw = (e) => {
-                if (!isDrawing) return;
-                const canvas = canvasRef.current;
-                const ctx = canvas.getContext('2d');
-                const rect = canvas.getBoundingClientRect();
-                const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
-                const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
-                ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : '#3b82f6';
-                ctx.lineWidth = tool === 'eraser' ? 30 : 3;
-                ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y);
-            };
-
-            return (
-                <div className="canvas-container no-print mb-6 overflow-hidden">
-                    <div className="flex gap-2 p-2 bg-slate-50 border-b">
-                        <button onClick={() => setTool('pen')} className={`px-3 py-1 rounded text-xs font-bold ${tool === 'pen' ? 'bg-blue-600 text-white' : 'bg-white border'}`}>🖊️ 畫筆</button>
-                        <button onClick={() => setTool('eraser')} className={`px-3 py-1 rounded text-xs font-bold ${tool === 'eraser' ? 'bg-rose-500 text-white' : 'bg-white border'}`}>🧽 擦除</button>
-                        <button onClick={() => { const ctx = canvasRef.current.getContext('2d'); ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); }} className="px-3 py-1 rounded text-xs font-bold bg-white border">🗑️ 清空</button>
-                    </div>
-                    <canvas ref={canvasRef} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} className="w-full cursor-crosshair bg-white" />
-                </div>
-            );
-        };
-
-        const App = () => {
-            const [loading, setLoading] = useState(false);
-            const [view, setView] = useState('welcome');
-            const [hasKey, setHasKey] = useState(true);
-            const [params, setParams] = useState({ publisher: '康軒', grade: '四年級', semester: '上' });
-            const [chapters, setChapters] = useState([]);
-            const [content, setContent] = useState(null);
-            const [homework, setHomework] = useState(null);
-
-            useEffect(() => {
-                const checkKey = async () => { if (window.aistudio) setHasKey(await window.aistudio.hasSelectedApiKey()); };
-                checkKey();
-            }, []);
-
-            const callAi = async (prompt) => {
-                const apiKey = window.process?.env?.API_KEY || "";
-                const ai = new GoogleGenAI({ apiKey });
-                const response = await ai.models.generateContent({
-                    model: 'gemini-3-flash-preview',
-                    contents: prompt,
-                    config: { systemInstruction: SYSTEM_PROMPT, responseMimeType: "application/json" }
-                });
-                return JSON.parse(response.text.replace(/```json/g, '').replace(/```/g, '').trim());
-            };
-
-            const handleFetchChapters = async () => {
-                setLoading(true);
-                try { setChapters(await callAi(`請列出 ${params.publisher}版 國小數學 ${params.grade}${params.semester} 的課程單元目錄。`)); } 
-                catch (e) { alert("查詢失敗"); }
-                setLoading(false);
-            };
-
-            const handleGenerateHandout = async (title, sub) => {
-                setLoading(true);
-                try { setContent(await callAi(`針對「${title}-${sub}」生成給資源班學生的講義。`)); setView('handout'); } 
-                catch (e) { alert("生成失敗"); }
-                setLoading(false);
-            };
-
-            return (
-                <div className="min-h-screen flex flex-col md:flex-row">
-                    <aside className="w-full md:w-80 bg-white border-r no-print p-6 space-y-8 overflow-y-auto max-h-screen sticky top-0">
-                        <h1 className="text-2xl font-black text-slate-900">🍎 資源班數學</h1>
-                        {!hasKey && <button onClick={() => window.aistudio.openSelectKey()} className="w-full bg-rose-500 text-white py-2 rounded-lg font-bold text-sm">🔑 連接 API</button>}
-                        <div className="space-y-4">
-                            <select className="w-full p-2 border rounded-lg bg-slate-50 font-bold" value={params.publisher} onChange={e => setParams({...params, publisher: e.target.value})}><option>康軒</option><option>南一</option><option>翰林</option></select>
-                            <select className="w-full p-2 border rounded-lg bg-slate-50 font-bold" value={params.grade} onChange={e => setParams({...params, grade: e.target.value})}><option>一年級</option><option>二年級</option><option>三年級</option><option>四年級</option><option>五年級</option><option>六年級</option></select>
-                            <button onClick={handleFetchChapters} className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold">查詢目錄</button>
-                        </div>
-                        {chapters.length > 0 && (
-                            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                                {chapters.map((c, i) => (
-                                    <div key={i} className="mb-4">
-                                        <p className="text-xs font-black text-slate-400 border-b mb-2">{c.title}</p>
-                                        {c.subChapters?.map((s, si) => <button key={si} onClick={() => handleGenerateHandout(c.title, s)} className="w-full text-left text-sm p-2 hover:bg-blue-50 rounded transition font-bold">📄 {s}</button>)}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </aside>
-
-                    <main className="flex-1 bg-slate-50 p-4 md:p-12 overflow-y-auto">
-                        {loading ? <div className="flex flex-col items-center justify-center h-96 animate-pulse text-xl font-black text-slate-400">正在召喚數學知識...</div> : (
-                            view === 'welcome' ? <div className="text-center opacity-40 py-40"><div className="text-[120px]">🏫</div><h2 className="text-3xl font-black">歡迎使用 AI 教室</h2></div> :
-                            view === 'handout' && content && (
-                                <div className="max-w-4xl mx-auto space-y-8 bg-white p-10 rounded-[3rem] shadow-xl border border-slate-200">
-                                    <div className="flex justify-between items-center no-print mb-8">
-                                        <button onClick={() => setView('welcome')} className="text-slate-400 font-bold">← 返回</button>
-                                        <button onClick={() => window.print()} className="bg-slate-800 text-white px-6 py-2 rounded-xl font-bold">🖨️ 列印講義</button>
-                                    </div>
-                                    <h1 className="text-5xl font-black mb-8 border-l-8 border-blue-600 pl-6">{content.title}</h1>
-                                    <div className="bg-blue-50 p-8 rounded-3xl border-2 border-blue-100 mb-12"><p className="math-text text-slate-700">{content.concept}</p></div>
-                                    {content.examples?.map((ex, i) => (
-                                        <div key={i} className="relative mb-20 border-t pt-10">
-                                            <span className="bg-blue-600 text-white px-4 py-1 rounded-lg text-xs font-bold mb-4 inline-block">例題 {i+1}</span>
-                                            <p className="text-3xl font-black mb-6">{ex.question}</p>
-                                            {ex.visualAidSvg && <div dangerouslySetInnerHTML={{__html: ex.visualAidSvg}} />}
-                                            <DrawingCanvas id={`ex-${i}`} />
-                                            <div className="bg-slate-50 p-6 rounded-2xl">{ex.stepByStep?.map((s, si) => <p key={si} className="text-slate-500 font-bold">Step {si+1}: {s}</p>)}<p className="text-2xl font-black text-emerald-600 pt-4 mt-4 border-t">答：{ex.answer}</p></div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )
-                        )}
-                    </main>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+</head>
+<body>
+    <div id="root"></div>
 </body>
 </html>
